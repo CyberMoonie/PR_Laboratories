@@ -1,0 +1,9 @@
+services:
+  fileserver:
+    build: .
+    container_name: http-fileserver
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+    environment:
+      - PYTHONUNBUFFERED=1

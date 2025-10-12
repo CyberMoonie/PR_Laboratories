@@ -1,0 +1,28 @@
+# Ignore these files when building the Docker image
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Virtual environments
+venv/
+env/
+
+# IDE files
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git files
+.git/
+.gitignore
+
+# Log files
+*.log
+
+# Temporary files
+*.tmp

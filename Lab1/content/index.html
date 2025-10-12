@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>My Digital Library</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; background-color: #f5f5f5; }
+        .container { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { color: #2c3e50; text-align: center; }
+        .welcome-image { display: block; margin: 20px auto; max-width: 200px; border: 2px solid #ddd; }
+        .books-section { margin-top: 30px; }
+        .book-list { list-style-type: none; padding: 0; }
+        .book-item { background: #ecf0f1; margin: 10px 0; padding: 15px; border-radius: 5px; }
+        .book-item a { color: #2980b9; text-decoration: none; font-weight: bold; }
+        .book-item a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Welcome to My Digital Library</h1>
+        
+        <img src="library.png" alt="Library Logo" class="welcome-image">
+        
+        <p>Welcome to my collection of books and documents. Browse through the available content below:</p>
+        
+        <div class="books-section">
+            <h2>Available Content:</h2>
+            <ul class="book-list">
+                <li class="book-item">
+                    <a href="books/">Books Directory</a>
+                    <p>Browse books</p>
+                </li>
+                <li class="book-item">
+                    <a href="sample.pdf">Sample PDF Document</a>
+                    <p>A sample PDF file demonstrating PDF serving capability</p>
+                </li>
+                <li class="book-item">
+                    <a href="library.png">Library Image</a>
+                    <p>PNG image file showing image serving capability</p>
+                </li>
+            </ul>
+        </div>
+        
+        <hr>
+    </div>
+</body>
+</html>
