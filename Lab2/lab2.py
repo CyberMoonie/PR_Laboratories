@@ -43,6 +43,7 @@ class MultithreadedHTTPServer:
     def handle_client(self, client_socket, client_address):
         try:
             if not self.check_rate_limit(client_address[0]):
+                print(f"RATE LIMITED: {client_address[0]}")
                 self.send_error(client_socket, 429, "Too Many Requests")
                 return
             
@@ -57,6 +58,9 @@ class MultithreadedHTTPServer:
                 
             method, path, version = parts[0], parts[1], parts[2]
             print(f"[Thread-{threading.current_thread().ident}] {method} {path}")
+            
+            # Simulate work with 1-second delay for performance testing
+            # time.sleep(1)
             
             with self.lock:
                 self.request_counts[path] += 1
@@ -88,12 +92,16 @@ class MultithreadedHTTPServer:
         current_time = time.time()
         
         with self.lock:
+            # Remove requests older than 1 second
             self.client_requests[client_ip] = [
                 req_time for req_time in self.client_requests[client_ip]
                 if current_time - req_time < 1.0
             ]
             
-            if len(self.client_requests[client_ip]) >= self.max_requests_per_second:
+            current_count = len(self.client_requests[client_ip])
+            print(f"[Rate Limit] IP: {client_ip}, Count: {current_count}/{self.max_requests_per_second}")
+            
+            if current_count >= self.max_requests_per_second:
                 return False
             
             self.client_requests[client_ip].append(current_time)
@@ -155,7 +163,6 @@ class MultithreadedHTTPServer:
         <tr><th>File / Directory</th><th>Hits</th></tr>
         {''.join(files)}
     </table>
-    <p><em>Multithreaded HTTP Server - Lab 2</em></p>
 </body>
 </html>'''
             
