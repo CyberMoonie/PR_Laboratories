@@ -1,0 +1,14 @@
+# Docker Compose configuration for Lab 2
+services:
+  # Main HTTP server service
+  pr2:                           # Service name as requested
+    build: .                     # Build from current directory (uses Dockerfile)
+    container_name: pr2-server   # Container will be named pr2-server
+    ports:
+      - "8000:8000"             # Map host port 8000 to container port 8000
+    restart: unless-stopped      # Restart if container crashes
+    environment:
+      - PYTHONUNBUFFERED=1      # See Python output immediately
+    volumes:
+      # Mount local content directory for easy updates during development
+      - "./content:/app/content:ro"  # :ro means read-only
