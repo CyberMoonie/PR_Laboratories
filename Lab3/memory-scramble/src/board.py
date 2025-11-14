@@ -1,5 +1,4 @@
 """
-Board ADT for Memory Scramble game.
 This module implements a thread-safe mutable board for the Memory Scramble game.
 """
 import threading
@@ -74,19 +73,19 @@ class Board:
         - grid is never returned directly; methods return copies or specific values
         - Card objects are not exposed; only their values and states are returned
         - All mutable operations are protected by locks
-    """
+    """ 
     
     def __init__(self, rows: int, cols: int, cards: List[str]):
         """
         Create a new game board.
         
-        Args:
-            rows: Number of rows in the board
-            cols: Number of columns in the board
-            cards: List of card values, must have exactly rows * cols elements
+        Preconditions:
+            - rows > 0 and cols > 0
+            - len(cards) == rows * cols
         
-        Raises:
-            ValueError: If rows or cols <= 0, or if len(cards) != rows * cols
+        Postconditions:
+            - Creates a board with all cards face down and no controllers
+            - Rep invariant holds
         """
         if rows <= 0 or cols <= 0:
             raise ValueError("Board dimensions must be positive")
@@ -141,6 +140,13 @@ class Board:
         
         Raises:
             ValueError: If the file cannot be read or is not a valid game board
+        
+        Preconditions:
+            - filename is a valid file path
+        
+        Postconditions:
+            - Returns a new Board matching the file specification
+            - Board rep invariant holds
         """
         try:
             with open(filename, 'r', encoding='utf-8') as f:
@@ -186,6 +192,13 @@ class Board:
             ROWxCOLUMN\n
             (none|down|up CARD|my CARD)\n
             ...
+        
+        Preconditions:
+            - player_id is a non-empty string
+        
+        Postconditions:
+            - Board state is unchanged
+            - Returns a valid board state string
         """
         with self.lock:
             lines = [f"{self.rows}x{self.cols}"]
@@ -216,14 +229,23 @@ class Board:
         
         Args:
             player_id: ID of the player making the flip
-            row: Row number of the card (0-indexed)
-            col: Column number of the card (0-indexed)
+            row: Row number of the card 
+            col: Column number of the card 
         
         Returns:
             The board state after the flip from the player's perspective
         
         Raises:
             ValueError: If the flip fails according to game rules
+        
+        Preconditions:
+            - player_id is a non-empty string
+            - 0 <= row < rows and 0 <= col < cols
+        
+        Postconditions:
+            - If successful, card is flipped and game state updated per rules
+            - If failed, raises ValueError and relinquishes control
+            - Rep invariant holds
         """
         if not (0 <= row < self.rows and 0 <= col < self.cols):
             raise ValueError(f"Invalid position ({row},{col})")
@@ -256,10 +278,19 @@ class Board:
     
     async def _flip_first_card(self, player_id: str, row: int, col: int) -> str:
         """
-        Handle flipping the first card of a pair.
+        Handle flipping the first card of a pair
         
-        Before flipping, cleanup previous turn if needed (rule 3-A and 3-B).
-        Then attempt to flip and control the first card (rules 1-A through 1-D).
+        Before flipping, cleanup previous turn if needed 
+        Then attempt to flip and control the first card
+        
+        Preconditions:
+            - Valid position (row, col)
+            - player_id exists in player_states
+        
+        Postconditions:
+            - Previous turn cleaned up (matched removed or unmatched turned down)
+            - First card is flipped and controlled by player
+            - player_state.first_card is set
         """
         # First, cleanup from previous turn
         with self.lock:
@@ -336,7 +367,7 @@ class Board:
                     return self.get_state(player_id)
                 
                 # Rule 1-D: Face up, controlled by another player - wait
-                if card.controller != player_id:
+                if card.state == CardState.FACE_UP and card.controller is not None and card.controller != player_id:
                     event = self.change_event
             
             # Wait for the card to become available
@@ -345,8 +376,17 @@ class Board:
     async def _flip_second_card(self, player_id: str, row: int, col: int) -> str:
         """
         Handle flipping the second card of a pair.
-        
         Implements rules 2-A through 2-E.
+        
+        Preconditions:
+            - player_state.first_card is set
+            - Valid position (row, col)
+        
+        Postconditions:
+            - Second card is flipped
+            - If match: both cards controlled by player, matched=True
+            - If no match: neither card controlled, matched=False
+            - player_state.second_card is set
         """
         with self.lock:
             player_state = self.player_states[player_id]
@@ -366,8 +406,8 @@ class Board:
                 self._check_rep()
                 raise ValueError(f"No card at position ({row},{col})")
             
-            # Rule 2-B: Face up and controlled - fail without waiting
-            if card.state == CardState.FACE_UP and card.controller is not None:
+            # Rule 2-B: Face up and controlled by another player - fail without waiting
+            if card.state == CardState.FACE_UP and card.controller is not None and card.controller != player_id:
                 if player_state.first_card:
                     r1, c1 = player_state.first_card
                     card1 = self.grid[r1][c1]
@@ -391,7 +431,9 @@ class Board:
             card1 = self.grid[r1][c1]
             
             # Rule 2-D and 2-E: Check if cards match
-            if card1 and card.value == card1.value:
+            # flipping the same card twice is treated as no match
+            is_same_position = (r1 == row and c1 == col)
+            if card1 and card.value == card1.value and not is_same_position:
                 # Match! Keep control of both
                 card.controller = player_id
                 player_state.second_card = (row, col)
@@ -413,15 +455,20 @@ class Board:
         """
         Replace every card with f(card), maintaining pairwise consistency.
         
-        This operation can interleave with other operations without blocking.
-        Pairs of matching cards are transformed atomically to maintain consistency.
-        
         Args:
             player_id: ID of the player applying the map
             f: Function that transforms card values
         
         Returns:
             The board state after the transformation from the player's perspective
+        
+        Preconditions:
+            - f is a valid function from strings to strings
+        
+        Postconditions:
+            - All cards replaced with f(card)
+            - Cards that matched before still match after (same transformation)
+            - Watchers are notified of the change
         """
         # Build a mapping of old values to new values
         value_map = {}
@@ -455,6 +502,14 @@ class Board:
         
         Returns:
             The updated board state from the player's perspective
+        
+        Preconditions:
+            - player_id is a non-empty string
+        
+        Postconditions:
+            - Blocks until board changes
+            - Returns updated board state
+            - Board state is unchanged
         """
         event = self.change_event
         await event.wait()

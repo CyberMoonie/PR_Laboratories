@@ -34,7 +34,6 @@ async def test_concurrent_players():
                 # Expected errors (no card, controlled, etc.) - this is OK!
                 results[player_id]['failed'] += 1
             except Exception as e:
-                # Unexpected errors - this is a BUG!
                 error_msg = f"{type(e).__name__}: {e}"
                 results[player_id]['errors'].append(error_msg)
     
